@@ -1,7 +1,5 @@
 FROM python:3.9-alpine
 
-MAINTAINER Alexey Stepanov <stepanov.geo@ya.ru>
-
 ENV PATH="/scripts:${PATH}"
 
 # set environment variables
@@ -32,4 +30,3 @@ RUN chmod -R 755 /vol/web
 USER user
 
 CMD ["entrypoint.sh"]
-

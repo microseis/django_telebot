@@ -1,10 +1,10 @@
 from django.contrib import admin
 
-from .models import User_Profile, Game, Message
 from .forms import ProfileForm
+from .models import Game, Message, UserProfile
 
 
-@admin.register(User_Profile)
+@admin.register(UserProfile)
 class ProfileAdmin (admin.ModelAdmin):
     list_display = ('id', "external_id", "name", 'main_game', 'steam_nickname', 'about', 'in_search')
     form = ProfileForm

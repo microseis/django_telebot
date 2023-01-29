@@ -1,26 +1,26 @@
 from django import forms
 
-from .models import User_Profile, Game
+from .models import Game, UserProfile
 
 
 class ProfileForm(forms.ModelForm):
-
     class Meta:
-        model = User_Profile
-        fields =(
-            'external_id', "name", 'main_game', 'steam_nickname', 'about'
+        model = UserProfile
+        fields = (
+            'external_id', "name", 'main_game', 'steam_nickname', 'about',
         )
-        widgets = {'name': forms.TextInput,
-                   'main_game': forms.TextInput,
-                   'steam_nickname': forms.TextInput,
-                   'about': forms.TextInput,}
+        widgets = {
+            'name': forms.TextInput,
+            'main_game': forms.TextInput,
+            'steam_nickname': forms.TextInput,
+            'about': forms.TextInput,
+        }
 
 
 class GameForm(forms.ModelForm):
-
     class Meta:
         model = Game
-        fields =(
+        fields = (
             "gamename",
         )
-        widgets = {'gamename': forms.TextInput,}
+        widgets = {'gamename': forms.TextInput, }

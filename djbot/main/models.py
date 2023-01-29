@@ -14,7 +14,7 @@ class Game(models.Model):
         verbose_name_plural = "Игры"
 
 
-class User_Profile(models.Model):
+class UserProfile(models.Model):
     external_id = models.PositiveIntegerField(
         verbose_name="Внешний ID пользователя",
         unique=True,

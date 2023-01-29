@@ -1,18 +1,17 @@
-from django.core.management.base import BaseCommand
-from django.conf import settings
+import logging
 
 from aiogram import Bot, Dispatcher, executor, types
-#  import asyncio
-from channels.db import database_sync_to_async
-from ...models import User_Profile, Game
-import logging
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher.filters import Text
-from ...keyboards import markup, markup_search, markup_visibility
-
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from channels.db import database_sync_to_async
+from django.conf import settings
+from django.core.management.base import BaseCommand
 from django.db.models import Q
+
+from ...keyboards import markup, markup_search, markup_visibility
+from ...models import Game, UserProfile
 
 logging.basicConfig(level=logging.INFO)
 
@@ -47,14 +46,11 @@ class Command(BaseCommand):
         @dp.message_handler(state='*', commands=['cancel'])
         @dp.message_handler(Text(equals='cancel', ignore_case=True), state='*')
         async def cancel_handler(message: types.Message, state: FSMContext):
-            """
-            Allow user to cancel any action
-            """
+            """Allow user to cancel any action."""
             current_state = await state.get_state()
             if current_state is None:
                 return
             logging.info('Cancelling state %r', current_state)
-            # Cancel state and inform user about it
             await state.finish()
             await message.answer('Ваш запрос успешно отменен.')
 
@@ -75,7 +71,7 @@ class Command(BaseCommand):
 
         @database_sync_to_async
         def get_user_data(data, message):
-            p, _ = User_Profile.objects.get_or_create(
+            p, _ = UserProfile.objects.get_or_create(
                 external_id=message.from_user.id,
                 defaults={
                     'name': message.from_user.username,
@@ -88,7 +84,7 @@ class Command(BaseCommand):
 
         @database_sync_to_async
         def update_game(data, message):
-            p, _ = User_Profile.objects.get_or_create(
+            p, _ = UserProfile.objects.get_or_create(
                 external_id=message.from_user.id,
                 defaults={
                     'name': message.from_user.username,
@@ -175,8 +171,9 @@ class Command(BaseCommand):
                 await FormSearch.choose_game.set()
                 await message.answer("В какую игру будем играть?", reply_markup=markup)
             else:
-                await message.answer("Пожалуйста установите Имя пользователя в настройках Telegram "
-                                     "для начала пользования ботом. Спасибо за понимание!")
+                await message.answer(
+                    "Пожалуйста установите Имя пользователя в настройках Telegram для начала пользования ботом. "
+                    "Спасибо за понимание!")
 
         @dp.callback_query_handler(lambda call: True, state=FormSearch.choose_game)
         async def process_choose_game(call: types.CallbackQuery, state: FSMContext):
@@ -197,7 +194,6 @@ class Command(BaseCommand):
             if message.from_user.username:
                 async with state.proxy() as data:
                     data['user_id'] = message.from_user.id
-                #print(data['user_id'])
                 chosen_user = await get_random(data)
                 if chosen_user is not None:
                     async with state.proxy() as data:
@@ -253,14 +249,14 @@ class Command(BaseCommand):
 
         @database_sync_to_async
         def get_random(data):
-            p = User_Profile.objects.filter(main_game=data['choose_game'],
-                                            in_search=True).filter(~Q(external_id=data['user_id'])).\
+            p = UserProfile.objects.filter(main_game=data['choose_game'],
+                                           in_search=True).filter(~Q(external_id=data['user_id'])).\
                 order_by("?").first()
             return p
 
         @database_sync_to_async
         def update_visibility(message, vis):
-            p, _ = User_Profile.objects.get_or_create(
+            p, _ = UserProfile.objects.get_or_create(
                 external_id=message.from_user.id,
                 defaults={
                     'name': message.from_user.username,
@@ -270,10 +266,9 @@ class Command(BaseCommand):
 
         @database_sync_to_async
         def user_exists(message):
-            if User_Profile.objects.filter(external_id=message.from_user.id).exists():
+            if UserProfile.objects.filter(external_id=message.from_user.id).exists():
                 return True
 
             return False
 
-        # loop = asyncio.get_event_loop()
         executor.start_polling(dp, skip_updates=True)
