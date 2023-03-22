@@ -1,6 +1,3 @@
-"""
-WSGI config for djbot project.
-"""
 
 import os
 

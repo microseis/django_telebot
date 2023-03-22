@@ -7,7 +7,7 @@ class Game(models.Model):
     )
 
     def __str__(self):
-        return f'{self.gamename}'
+        return f"{self.gamename}"
 
     class Meta:
         verbose_name = "Игра"
@@ -42,7 +42,7 @@ class UserProfile(models.Model):
     )
 
     def __str__(self):
-        return f'#{self.external_id} {self.name}'
+        return f"#{self.external_id} {self.name}"
 
     class Meta:
         verbose_name = "Профиль"
@@ -51,7 +51,7 @@ class UserProfile(models.Model):
 
 class Message(models.Model):
     profile = models.ForeignKey(
-        to='main.User_Profile',
+        to="main.UserProfile",
         verbose_name="Профиль",
         on_delete=models.PROTECT,
     )
@@ -64,7 +64,7 @@ class Message(models.Model):
     )
 
     def __str__(self):
-        return f'Сообщение {self.pk} от {self.profile}'
+        return f"Сообщение {self.pk} от {self.profile}"
 
     class Meta:
         verbose_name = "Сообщение"
