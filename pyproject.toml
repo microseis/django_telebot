@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "django-telebot"
+version = "0.1.0"
+description = ""
+authors = ["Aleksei Stepanov <stepanov.geo@ya.ru>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+django = "^5.1.4"
+aiogram = "2.20"
+psycopg2 = "2.9.9"
+psycopg2-binary = "2.9.9"
+channels = "^4.2.0"
+
+
+[tool.poetry.group.dev.dependencies]
+isort = "^5.13.2"
+black = "^24.10.0"
+flake8 = "^7.1.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

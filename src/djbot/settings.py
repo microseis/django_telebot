@@ -8,7 +8,7 @@ SECRET_KEY = os.environ.get("DJANGO_KEY")
 
 DEBUG = os.environ.get("DEBUG", False) == "True"
 
-ALLOWED_HOSTS = os.environ.get("WEBSITE_HOSTS").split(",")
+ALLOWED_HOSTS = os.environ.get("WEBSITE_HOSTS", default="localhost").split(",")
 
 
 INSTALLED_APPS = [
@@ -62,7 +62,7 @@ DATABASES = {
     }
 }
 
-AUTH_PASSWORD_VALIDATORS = [
+AUTH_PASSWORD_VALIDATORS: list = [
 ]
 
 LANGUAGE_CODE = 'ru'

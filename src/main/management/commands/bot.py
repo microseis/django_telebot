@@ -40,6 +40,7 @@ class Command(BaseCommand):
     help = "Telegram Bot"
 
     def handle(self, *args, **options):
+        """Bot logic."""
         bot = Bot(token=settings.TOKEN)
         dp = Dispatcher(bot, storage=storage)
 
@@ -118,7 +119,7 @@ class Command(BaseCommand):
                 )
 
         @dp.message_handler(commands=["help"])
-        async def send_welcome(message: types.Message):
+        async def allowed_commands(message: types.Message):
             if message.from_user.username:
                 await message.answer(
                     "Список доступных команд:\n\n"
@@ -137,7 +138,7 @@ class Command(BaseCommand):
         @dp.message_handler(commands=["update", "profile"])
         async def send_update(message: types.Message):
             if message.from_user.username:
-                await message.reply(f"Пожалуйста, введите данные о себе:")
+                await message.reply("Пожалуйста, введите данные о себе:")
                 await Form.about.set()
             else:
                 await message.answer(
@@ -146,7 +147,7 @@ class Command(BaseCommand):
                 )
 
         @dp.message_handler(state=Form.about)
-        async def process_about(message: types.Message, state: FSMContext):
+        async def process_about_final(message: types.Message, state: FSMContext):
             if len(message.text) > 2:
                 async with state.proxy() as data:
                     data["about"] = message.text
@@ -166,7 +167,7 @@ class Command(BaseCommand):
                 data["main_game"] = call.data
             try:
                 await bot.edit_message_text(
-                    text=f"Введите ваш никнейм в Steam:",
+                    text="Введите ваш никнейм в Steam:",
                     chat_id=call.message.chat.id,
                     message_id=call.message.message_id,
                 )
@@ -265,7 +266,7 @@ class Command(BaseCommand):
             await state.finish()
 
         @dp.callback_query_handler(text="next_user", state=FormSearch.choose_player)
-        async def process_callback_button_user_selected(
+        async def process_callback_button_user_selected_final(
             call: types.CallbackQuery, state: FSMContext
         ):
             async with state.proxy() as data:
@@ -284,7 +285,7 @@ class Command(BaseCommand):
                     )
                 else:
                     await call.message.answer(
-                        "Нет подходящих игроков.\n\n" f"Попробуйте выбрать другую игру"
+                        "Нет подходящих игроков.\n\nПопробуйте выбрать другую игру"
                     )
                     await state.finish()
 

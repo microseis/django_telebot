@@ -1,6 +1,11 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 set -e
+
+echo "Waiting for database..."
+
+while ! nc -z ${DB_HOST} ${DB_PORT}; do sleep 1; done
+echo "Connected to database."
 
 echo "Collect static files"
 python manage.py collectstatic --noinput
@@ -14,5 +19,5 @@ python manage.py migrate --noinput
 
 python manage.py bot
 
-uwsgi --strict --ini /app/uwsgi/uwsgi.ini
+uwsgi --strict --ini /var/www/app/src/uwsgi/uwsgi.ini
 
