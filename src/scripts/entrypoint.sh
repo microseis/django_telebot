@@ -17,7 +17,5 @@ python manage.py makemigrations main
 
 python manage.py migrate --noinput
 
-python manage.py bot
-
-uwsgi --strict --ini /var/www/app/src/uwsgi/uwsgi.ini
-
+# Start Gunicorn
+uvicorn djbot.asgi:application --reload --host 0.0.0.0 --port 8000  --proxy-headers --forwarded-allow-ips=*

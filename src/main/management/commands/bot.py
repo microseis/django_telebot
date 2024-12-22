@@ -1,27 +1,30 @@
-import logging
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.types import Message
 from channels.db import database_sync_to_async
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db.models import Q
 
+from utils.logger import logger
+
 from .keyboards import markup, markup_search, markup_visibility
 from main.models import Game, UserProfile
 
-logging.basicConfig(level=logging.INFO)
 
 storage = MemoryStorage()
 
 all_games = Game.objects.all()
-gameList = []
+game_list: list = []
 
 for game in all_games:
-    gameList.append(game.gamename)
+    game_list.append(game.gamename)
+
+logger.info(f"available games: {game_list}")
 
 
 class Form(StatesGroup):
@@ -39,41 +42,52 @@ class FormSearch(StatesGroup):
 class Command(BaseCommand):
     help = "Telegram Bot"
 
-    def handle(self, *args, **options):
+    def handle(self, *args, **options) -> None:
         """Bot logic."""
         bot = Bot(token=settings.TOKEN)
-        dp = Dispatcher(bot, storage=storage)
+        dp = Dispatcher(bot=bot, storage=storage)
 
         @dp.message_handler(state="*", commands=["cancel"])
         @dp.message_handler(Text(equals="cancel", ignore_case=True), state="*")
-        async def cancel_handler(message: types.Message, state: FSMContext):
+        async def cancel_handler(message: Message, state: FSMContext) -> None:
             """Allow user to cancel any action."""
-            current_state = await state.get_state()
+
+            current_state: str | None = await state.get_state()
             if current_state is None:
                 return
-            logging.info("Cancelling state %r", current_state)
+
+            logger.info(f"Cancelling state {current_state}")
+
             await state.finish()
+
             await message.answer("Ваш запрос успешно отменен.")
 
         @dp.callback_query_handler(text="visible")
-        async def process_callback_button1(message: types.Message):
+        async def process_callback_button1(message: Message) -> None:
+
             await update_visibility(message, vis=True)
+
             await message.answer("Ваш профиль теперь доступен для поиска")
 
         @dp.callback_query_handler(text="invisible")
-        async def process_callback_button2(message: types.Message):
+        async def process_callback_button2(message: Message) -> None:
+
             await update_visibility(message, vis=False)
+
             await message.answer("Ваш профиль больше не доступен для поиска")
 
         @dp.message_handler(commands=["visibility"])
-        async def process_about(message: types.Message):
+        async def process_about(message: Message) -> None:
+
             await message.answer(
                 "Какую настройку видимости применить к вашему профилю?",
                 reply_markup=markup_visibility,
             )
 
         @database_sync_to_async
-        def get_user_data(data, message):
+        def get_user_data(data, message: Message) -> None:
+            """Сохранение данных о пользователе в бд."""
+
             p, _ = UserProfile.objects.get_or_create(
                 external_id=message.from_user.id,
                 defaults={
@@ -87,7 +101,7 @@ class Command(BaseCommand):
             p.save()
 
         @database_sync_to_async
-        def update_game(data, message):
+        def update_game(data, message: Message) -> None:
             p, _ = UserProfile.objects.get_or_create(
                 external_id=message.from_user.id,
                 defaults={
@@ -98,71 +112,71 @@ class Command(BaseCommand):
             p.save()
 
         @dp.message_handler(commands=["start"])
-        async def send_welcome(message: types.Message):
-            if message.from_user.username:
-                if await user_exists(message):
-                    await message.answer(
-                        f"Рады приветствовать вас снова, {message.from_user.first_name}! \n\n"
-                        f"Для получения списка доступных команд нажмите  /help\n"
-                        f"Для выбора игры и поиска случайного соперника нажмите /play\n\n"
-                    )
-                else:
-                    await message.answer(
-                        f"Добрый день, {message.from_user.first_name} {message.from_user.last_name}! \n\n"
-                        f"Для того, чтобы начать пользоваться ботом, пожалуйста "
-                        f"заполните данные о себе, нажав команду /profile"
-                    )
-            else:
+        async def send_welcome(message: Message) -> None:
+
+            if not message.from_user.username:
                 await message.answer(
                     "Пожалуйста установите Имя пользователя в настройках Telegram "
                     "для начала пользования ботом. Спасибо за понимание!"
+                )
+
+            if await user_exists(message):
+                await message.answer(
+                    f"Рады приветствовать вас снова, {message.from_user.first_name}! \n\n"
+                    f"Для получения списка доступных команд нажмите  /help\n"
+                    f"Для выбора игры и поиска случайного соперника нажмите /play\n\n"
+                )
+            else:
+                await message.answer(
+                    f"Добрый день, {message.from_user.first_name} {message.from_user.last_name}! \n\n"
+                    f"Для того, чтобы начать пользоваться ботом, пожалуйста "
+                    f"заполните данные о себе, нажав команду /profile"
                 )
 
         @dp.message_handler(commands=["help"])
-        async def allowed_commands(message: types.Message):
-            if message.from_user.username:
-                await message.answer(
-                    "Список доступных команд:\n\n"
-                    "/start - Начало работы с ботом\n"
-                    "/update - Редактирование данных профиля\n"
-                    "/play - Выбор игры и соперника\n"
-                    "/visibility - Изменение настроек видимости профиля\n"
-                    "/cancel - Отмена выполнения запроса\n\n"
-                )
-            else:
+        async def allowed_commands(message: Message) -> None:
+            """Список доступных команд бота."""
+            if not message.from_user.username:
                 await message.answer(
                     "Пожалуйста установите Имя пользователя в настройках Telegram "
                     "для начала пользования ботом. Спасибо за понимание!"
                 )
+            await message.answer(
+                "Список доступных команд:\n\n"
+                "/start - Начало работы с ботом\n"
+                "/update - Редактирование данных профиля\n"
+                "/play - Выбор игры и соперника\n"
+                "/visibility - Изменение настроек видимости профиля\n"
+                "/cancel - Отмена выполнения запроса\n\n"
+            )
 
         @dp.message_handler(commands=["update", "profile"])
-        async def send_update(message: types.Message):
-            if message.from_user.username:
-                await message.reply("Пожалуйста, введите данные о себе:")
-                await Form.about.set()
-            else:
+        async def send_update(message: Message) -> None:
+            if not message.from_user.username:
                 await message.answer(
                     "Пожалуйста установите Имя пользователя в настройках Telegram "
                     "для начала пользования ботом. Спасибо за понимание!"
                 )
+            await message.reply("Пожалуйста, введите данные о себе:")
+            await Form.about.set()
 
         @dp.message_handler(state=Form.about)
-        async def process_about_final(message: types.Message, state: FSMContext):
-            if len(message.text) > 2:
-                async with state.proxy() as data:
-                    data["about"] = message.text
-                await Form.main_game.set()
-                await message.answer(
-                    "Отлично! В какую игру вы собираетесь поиграть?",
-                    reply_markup=markup,
-                )
-            else:
+        async def process_about_final(message: Message, state: FSMContext) -> None:
+            if not len(message.text) > 2:
                 await message.answer(
                     "А вы не так многословны :). Пожалуйста напишите о себе чуть-подробнее:"
                 )
+            async with state.proxy() as data:
+                data["about"] = message.text
+
+            await Form.main_game.set()
+            await message.answer(
+                "Отлично! В какую игру вы собираетесь поиграть?",
+                reply_markup=markup,
+            )
 
         @dp.callback_query_handler(lambda call: True, state=Form.main_game)
-        async def process_game(call: types.CallbackQuery, state: FSMContext):
+        async def process_game(call: types.CallbackQuery, state: FSMContext) -> None:
             async with state.proxy() as data:
                 data["main_game"] = call.data
             try:
@@ -173,12 +187,13 @@ class Command(BaseCommand):
                 )
                 await Form.steam_nickname.set()
             except Exception as e:
-                logging.debug(e)
+                logger.debug(e)
 
         @dp.message_handler(state=Form.steam_nickname)
-        async def process_steam(message: types.Message, state: FSMContext):
+        async def process_steam(message: Message, state: FSMContext) -> None:
             async with state.proxy() as data:
                 data["steam_nickname"] = message.text
+
             await get_user_data(data, message)
             await message.answer(
                 f"Спасибо, вы успешно ввели следующие данные:\n\n"
@@ -190,7 +205,7 @@ class Command(BaseCommand):
             await state.finish()
 
         @dp.message_handler(commands=["play"])
-        async def process_play(message: types.Message):
+        async def process_play(message: Message) -> None:
             if message.from_user.username:
                 await FormSearch.choose_game.set()
                 await message.answer("В какую игру будем играть?", reply_markup=markup)
@@ -201,7 +216,7 @@ class Command(BaseCommand):
                 )
 
         @dp.callback_query_handler(lambda call: True, state=FormSearch.choose_game)
-        async def process_choose_game(call: types.CallbackQuery, state: FSMContext):
+        async def process_choose_game(call: types.CallbackQuery, state: FSMContext) -> None:
             async with state.proxy() as data:
                 data["choose_game"] = call.data
             try:
@@ -214,14 +229,14 @@ class Command(BaseCommand):
                 await update_game(data, call)
                 await FormSearch.choose_player.set()
             except Exception as e:
-                logging.debug(e)
+                logger.debug(e)
 
         @dp.message_handler(commands=["search"], state=FormSearch.choose_player)
-        async def process_search(message: types.Message, state: FSMContext):
+        async def process_search(message: Message, state: FSMContext) -> None:
             if message.from_user.username:
                 async with state.proxy() as data:
                     data["user_id"] = message.from_user.id
-                chosen_user = await get_random(data)
+                chosen_user: UserProfile = await get_random(data)
                 if chosen_user is not None:
                     async with state.proxy() as data:
                         data["choose_player"] = chosen_user.external_id
@@ -253,7 +268,7 @@ class Command(BaseCommand):
         @dp.callback_query_handler(text="user_selected", state=FormSearch.choose_player)
         async def process_callback_button_user_selected(
             message: types.Message, state: FSMContext
-        ):
+        ) -> None:
             async with state.proxy() as data:
                 await message.answer(
                     "Отлично! Ваше приглашение было отправлено выбранному пользователю"
@@ -268,9 +283,9 @@ class Command(BaseCommand):
         @dp.callback_query_handler(text="next_user", state=FormSearch.choose_player)
         async def process_callback_button_user_selected_final(
             call: types.CallbackQuery, state: FSMContext
-        ):
+        ) -> None:
             async with state.proxy() as data:
-                chosen_user = await get_random(data)
+                chosen_user: UserProfile = await get_random(data)
             try:
                 if chosen_user.name:
                     await call.message.answer(
@@ -290,11 +305,11 @@ class Command(BaseCommand):
                     await state.finish()
 
             except Exception as e:
-                logging.debug(e)
+                logger.debug(e)
 
         @database_sync_to_async
-        def get_random(data):
-            p = (
+        def get_random(data) -> UserProfile | None:
+            p: UserProfile | None = (
                 UserProfile.objects.filter(
                     main_game=data["choose_game"], in_search=True
                 )
@@ -305,7 +320,7 @@ class Command(BaseCommand):
             return p
 
         @database_sync_to_async
-        def update_visibility(message, vis):
+        def update_visibility(message: Message, vis: bool) -> None:
             p, _ = UserProfile.objects.get_or_create(
                 external_id=message.from_user.id,
                 defaults={
@@ -316,10 +331,10 @@ class Command(BaseCommand):
             p.save()
 
         @database_sync_to_async
-        def user_exists(message):
+        def user_exists(message: Message) -> bool:
             if UserProfile.objects.filter(external_id=message.from_user.id).exists():
                 return True
 
             return False
 
-        executor.start_polling(dp, skip_updates=True)
+        executor.start_polling(dispatcher=dp, skip_updates=True)

@@ -3,6 +3,7 @@ venv
 db
 docker-compose-dev.yml
 docker.env
+src/static
 
 ### Python template
 # Byte-compiled / optimized / DLL files

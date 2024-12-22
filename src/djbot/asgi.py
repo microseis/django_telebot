@@ -2,7 +2,8 @@
 import os
 
 from django.core.asgi import get_asgi_application
+from django.core.handlers.asgi import ASGIHandler
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'djbot.settings')
+os.environ.setdefault(key='DJANGO_SETTINGS_MODULE', value='djbot.settings')
 
-application = get_asgi_application()
+application: ASGIHandler = get_asgi_application()
